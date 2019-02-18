@@ -6,11 +6,10 @@ A typical workflow with the simple HTML page:
 
 # You may expect:
 1. runs on localhost of your machine (open it from the fs in a browser)
-2. uses the pre release server (currently on port 81)
-3. "Create new Contract" issues a CREATE REST-request (updates the address in the right panel)
-4. "Update Contract" issues a READ or UPDATE request (depending on the flow element in the right panel)
-5. as a suggestion: when you recompile your Contract, you may exchange the elements "data" and "ABI" in the files json/deployJson.js (CREATE) and json/updateJson.js (UPDATE)
-6. as a suggestion: you may want to reuse an existing address after a CREATE by editing the field "mining.contractAddress" in json/updateJson.js so that it is immediately available after you reload the page
+2. "Create new Contract" issues a CREATE REST-request (updates the address in the right panel)
+3. "Update Contract" issues a READ or UPDATE request (depending on the flow element in the right panel)
+4. as a suggestion: when you recompile your Contract, you may exchange the elements "data" and "ABI" in the files json/deployJson.js (CREATE) and json/updateJson.js (UPDATE)
+5. as a suggestion: you may want to reuse an existing address after a CREATE by editing the field "mining.contractAddress" in json/updateJson.js so that it is immediately available after you reload the page
 
 # Do not expect:
 1. compiling of your Solidity Contract code or ..
