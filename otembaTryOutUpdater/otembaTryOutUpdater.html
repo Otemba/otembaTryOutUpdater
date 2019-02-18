@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>ETH - PayPal Payment provider title</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="./css/simple.css" rel="stylesheet" type="text/css">
+
+<script type="text/javascript" src="./json/updateJson.js"></script>
+<script type="text/javascript" src="./json/deployJson.js"></script>
+<script type="text/javascript" src="./src/jsonHelper.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+<script src="./src/jquery.json-editor.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- https://www.jqueryscript.net/other/Beautiful-JSON-Viewer-Editor.html -->
+
+
+<script type="text/javascript">
+
+	$(document).ready(function() {
+	
+		//get JSON from the editor on the right hand
+		function getJsonFromRight() {
+			try {
+				var jsonRight = editorRight.get();
+				return jsonRight;
+			} catch (ex) {
+				alert('Wrong JSON Format: ' + ex);
+			}
+		}
+		
+		var jsonToSend = updateContractDialog; 
+	
+		var editorLeft = new JsonEditor('#json-display-left', {});
+		var editorRight = new JsonEditor('#json-display-right', jsonToSend);
+		
+		// removes update element and if available
+		function cleanupUpdateElement(json) {
+			if ( json.flow === undefined ) { json.flow = []; }
+			const replaceBy = json.flow.filter(element => element.type !== "update"  );
+			json.flow = replaceBy;
+			return json;
+		} 
+		
+		// adds flow element
+		function addFlowElement(json, element) {
+			json.flow.push(element);
+			return json;
+		}
+		
+		// adds 
+		$('#b1').on('click', function() {
+			var result = cleanupUpdateElement(getJsonFromRight());
+			result = addFlowElement(result, {
+				"type": "update",
+				"method": "setEngravedText",
+				"parameters": [
+				"new value"
+				]
+				});
+			editorRight.load(result);
+		});
+	
+		// adds 
+		$('#b2').on('click', function() {
+			editorRight.load(addFlowElement(getJsonFromRight(), {
+				"type": "inspect",
+				"method": "getEngravedText"
+				}));
+		});
+		
+		function getUpdateElement(json) {
+			return json.flow.filter(element => element.type === "update");
+		};
+		
+		function hasOneUpdateElment(json) {
+			return getUpdateElement(json).length === 1;
+		};
+	
+		function validateUpdateElment(json) {
+			if ( getUpdateElement(json).length > 1 ) { return "Json right can have only one update element."; };
+		};
+		
+		function getUrl() {
+			return "http://otemba.io:81/voucherService";
+		}
+		
+		var hasErrors = function(json) {
+			return ( json.errorReport.length > 0 );
+		}
+		
+		// show errors if any
+		function uglyfyWhenError(dialog) {
+	 		$("#errors").empty();
+	 		if ( hasErrors(dialog) ) {
+				document.getElementById('errors').appendChild(createUL(dialog.errorReport));
+	 		}
+		}
+		
+		// a helper for showing errors
+		function createUL(json) {
+			
+		    var list = document.createElement('ul');
+		    
+		    if (json === undefined || json.length === 0) { return list; }
+
+		    for (var i = 0; i < json.length; i++){
+		    	var item = document.createElement('li');
+		        item.appendChild(document.createTextNode(json[i]));
+		        list.appendChild(item);
+		    }
+		    return list;
+		}
+		
+		// Update and new Contract from here ->
+		
+		var triggerButtonFunction = function(dialog, performOnSuccess) {
+			$.ajax(getUrl(), {
+			    data : JSON.stringify(dialog),
+			    contentType : 'application/json',
+			    type : 'POST',
+				success: function(data, status) {
+					performOnSuccess(data);
+				},
+				error: function(error) {
+					// showRedBorder();
+					alert("not available: "+getUrl()); 
+				}
+			});
+		};
+
+
+		// Update an existing Contract from here ->
+		
+		// multiple non blocking calls
+		function processUpdate(json) {
+			uglyfyWhenError(json);
+			editorRight.load(json);
+			triggerButtonFunction(getJsonFromRight(), processUpdateLoop);
+		}
+		
+		function processUpdateLoop(json) {
+			uglyfyWhenError(json);
+			if ( JSON.elementExists(json, "miningStatus.contractAddress") ) {
+				editorLeft.load(json);
+				return;
+			}
+			if ( !confirm("Continue connecting to Otemba?") ) {
+				// break
+				return;
+			}
+			editorRight.load(json);
+			triggerButtonFunction(getJsonFromRight(), processUpdateLoop);
+		}
+		
+		// one time call
+		function processInspect(json) {
+			uglyfyWhenError(json);
+			editorLeft.load(json);
+		}
+		
+		// sends json to Otemba
+		$('#send').on('click', function() {
+			if ( hasOneUpdateElment(getJsonFromRight()) ) {
+				triggerButtonFunction(getJsonFromRight(), processUpdate);
+			}
+			else {
+				triggerButtonFunction(getJsonFromRight(), processInspect);
+			}
+		});
+		
+		// Create a new Contract from here ->
+		
+		// multiple non blocking calls
+		function processCreateNew(json) {
+			uglyfyWhenError(json);
+			if ( JSON.elementExists(json, "miningStatus.contractAddress") ) {
+				updateContractDialog.mining.contractAddress = json.miningStatus.contractAddress;
+				editorRight.load(updateContractDialog);
+				return;
+			}
+			if ( !confirm("Continue connecting to Otemba?") ) {
+				// break
+				return;
+			}
+			triggerButtonFunction(json, processCreateNew);
+		}
+		
+		// sends json to Otemba
+		$('#createNew').on('click', function() {
+			triggerButtonFunction(deployContractDialog, processCreateNew);
+		});
+		
+	});	
+
+</script>
+
+</head>
+
+<body>
+
+	<div class="section center container">
+		<div class="left" id="selectMode1">
+			<button id="send">Inspect Contract (READ and/or UPDATE)</button>
+			<button id="createNew">Create new Contract (CREATE)</button>
+		</div>
+		<div class="right" id="selectMode2">
+			<button id="b1">Set Text</button>
+			<button id="b2">Get Text</button>
+		</div>
+	</div>
+	
+	<div id="errors"></div>
+
+	<div class="center container">
+		<div class="left editor"><pre id="json-display-left"></pre></div>
+		<div><img class="left" id="img1" src="./img/arrowLeft.png" ></div>
+		<div class="right editor"><pre id="json-display-right"></pre></div>
+	</div>
+
+	<div id="errors"></div>
+
+
+</body>
+
+</html>
