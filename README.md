@@ -1,10 +1,10 @@
 # otembaTryOutUpdater
-#H1 Simple html page app to issue REST requests to Otemba.io
+# Simple html page app to issue REST requests to Otemba.io
 If you want to try Otemba.io or need an example of using the REST interface, this is a good place to start.
 
 A typical workflow with the simple HTML page:
 
-#H2 You may expect:
+# You may expect:
 1. runs on localhost of your machine (open it from the fs in a browser)
 2. uses the pre release server (currently on port 81)
 3. "Create new Contract" issues a CREATE REST-request (updates the address in the right panel)
@@ -12,7 +12,7 @@ A typical workflow with the simple HTML page:
 5. as a suggestion: when you recompile your Contract, you may exchange the elements "data" and "ABI" in the files json/deployJson.js (CREATE) and json/updateJson.js (UPDATE)
 6. as a suggestion: you may want to reuse an existing address after a CREATE by editing the field "mining.contractAddress" in json/updateJson.js so that it is immediately available after you reload the page
 
-#H2 Do not expect:
+# Do not expect:
 1. compiling of your Solidity Contract code or ..
 2. debugging of your Contract
 3. validation of your REST requests
