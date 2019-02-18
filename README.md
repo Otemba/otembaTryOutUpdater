@@ -18,3 +18,5 @@ A typical workflow with the simple HTML page:
 3. validation of your REST requests
 
 ![alt text](https://github.com/Otemba/otembaTryOutUpdater/blob/master/otembaTryOutUpdater/userInteraction.png "Workflow diagram.")
+
+Image: The red dots symbolize a reload of the html page in your browser. In the state "Fill json request" you push the buttons on the upper right panel. Then by hitting "Update" in the left panel, a request is sent to the Otemba.io REST server. 
