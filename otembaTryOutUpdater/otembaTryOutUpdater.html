@@ -9,19 +9,27 @@
 
 <script type="text/javascript" src="./json/updateJson.js"></script>
 <script type="text/javascript" src="./json/deployJson.js"></script>
+
 <script type="text/javascript" src="./src/jsonHelper.js"></script>
+<script type="text/javascript" src="./src/OtembaEventEmitter.js"></script>
 
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
 <script src="./src/jquery.json-editor.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
-<!-- https://www.jqueryscript.net/other/Beautiful-JSON-Viewer-Editor.html -->
+<!-- editor: https://www.jqueryscript.net/other/Beautiful-JSON-Viewer-Editor.html -->
 
 
 <script type="text/javascript">
 
+	function getUrl() {
+		return "https://otemba.io/voucherService";
+		// return "https://localhost/voucherService"; // test localhost
+		// return "https://otemba.io:444/voucherService"; // test pre-release
+	}
+
 	$(document).ready(function() {
-	
+
 		//get JSON from the editor on the right hand
 		function getJsonFromRight() {
 			try {
@@ -51,49 +59,42 @@
 			return json;
 		}
 		
+		// save the contracts address element and refresh right panel
+		function refreshAndSaveContractElementForUpdate(json) {
+			if ( JSON.elementExists(json, "mining.contractAddress") ) {
+				updateContractDialog.mining.contractAddress = json.mining.contractAddress;
+			}
+			editorRight.load(updateContractDialog);
+		}
+		
 		// adds 
 		$('#b1').on('click', function() {
-			var result = cleanupUpdateElement(getJsonFromRight());
-			result = addFlowElement(result, {
+			var result = addFlowElement(getJsonFromRight(), { 
 				"type": "update",
 				"method": "setEngravedText",
-				"parameters": [
-				"new value"
-				]
-				});
+				"parameters": [ "new value" ] });
 			editorRight.load(result);
 		});
-	
+		
 		// adds 
 		$('#b2').on('click', function() {
-			editorRight.load(addFlowElement(getJsonFromRight(), {
-				"type": "inspect",
+			editorRight.load(addFlowElement(getJsonFromRight(), { 
+				"type": "inspect", 
 				"method": "getEngravedText"
-				}));
+			}));
 		});
-		
-		function getUpdateElement(json) {
-			return json.flow.filter(element => element.type === "update");
-		};
-		
-		function hasOneUpdateElment(json) {
-			return getUpdateElement(json).length === 1;
-		};
 	
+		
 		function validateUpdateElment(json) {
 			if ( getUpdateElement(json).length > 1 ) { return "Json right can have only one update element."; };
 		};
-		
-		function getUrl() {
-			return "https://otemba.io/voucherService";
-		}
 		
 		var hasErrors = function(json) {
 			return ( json.errorReport.length > 0 );
 		}
 		
 		// show errors if any
-		function uglyfyWhenError(dialog) {
+		function uglyfyWhenError(errorReport) {
 	 		$("#errors").empty();
 	 		if ( hasErrors(dialog) ) {
 				document.getElementById('errors').appendChild(createUL(dialog.errorReport));
@@ -109,90 +110,85 @@
 
 		    for (var i = 0; i < json.length; i++){
 		    	var item = document.createElement('li');
-		        item.appendChild(document.createTextNode(json[i]));
+		        item.appendChild(document.createTextNode(JSON.stringify(json[i])));
 		        list.appendChild(item);
 		    }
 		    return list;
 		}
 		
+		
 		// Update and new Contract from here ->
-		
-		var triggerButtonFunction = function(dialog, performOnSuccess) {
-			$.ajax(getUrl(), {
-			    data : JSON.stringify(dialog),
-			    contentType : 'application/json',
-			    type : 'POST',
-				success: function(data, status) {
-					performOnSuccess(data);
-				},
-				error: function(error) {
-					// showRedBorder();
-					alert("not available: "+getUrl()); 
-				}
-			});
-		};
+		var updateButtonLabel = "Update Contract";
+		var counter = 0;
 
-
-		// Update an existing Contract from here ->
-		
-		// multiple non blocking calls
-		function processUpdate(json) {
-			uglyfyWhenError(json);
-			editorRight.load(json);
-			triggerButtonFunction(getJsonFromRight(), processUpdateLoop);
-		}
-		
-		function processUpdateLoop(json) {
-			uglyfyWhenError(json);
-			if ( JSON.elementExists(json, "miningStatus.contractAddress") ) {
-				editorLeft.load(json);
-				return;
-			}
-			if ( !confirm("Continue connecting to Otemba?") ) {
-				// break
-				return;
-			}
-			editorRight.load(json);
-			triggerButtonFunction(getJsonFromRight(), processUpdateLoop);
-		}
-		
-		// one time call
-		function processInspect(json) {
-			uglyfyWhenError(json);
-			editorLeft.load(json);
-		}
-		
 		// sends json to Otemba
 		$('#send').on('click', function() {
-			if ( hasOneUpdateElment(getJsonFromRight()) ) {
-				triggerButtonFunction(getJsonFromRight(), processUpdate);
-			}
-			else {
-				triggerButtonFunction(getJsonFromRight(), processInspect);
-			}
+			eventEmitter.send(getJsonFromRight());
 		});
 		
 		// Create a new Contract from here ->
+
+		// Deploy starts here
 		
-		// multiple non blocking calls
-		function processCreateNew(json) {
-			uglyfyWhenError(json);
-			if ( JSON.elementExists(json, "miningStatus.contractAddress") ) {
-				updateContractDialog.mining.contractAddress = json.miningStatus.contractAddress;
+		var createButtonLabel = "Create new Contract ";
+		
+		var eventEmitter = new OtembaEventEmitter({
+			url : getUrl(),
+			pollTime : 1000,
+			contentType : 'application/json',
+		    type : 'POST',
+		    start: function() {
+		    	// one time for each send
+		    	counter = 0;
+		    },
+		    fullResponse: function(rawResponseJson, status) {
+		    	// directly from the call to Otemba for optional use
+		    	editorLeft.load(rawResponseJson);
+		    },
+			successOnQuote: function(jsonQuote) {
+				// do whatever is needed
+			},
+			successOnTransaction: function(transactionId) {
+				// shortly after start
+				$('#createNew').html(createButtonLabel+"("+(++counter)+")");
+			},
+			successOnMined: function(result) {
+				// finalizes the send
+				console.log("transaction and address: "+JSON.stringify(result));
+				updateContractDialog.mining.contractAddress = result.contractAddress;
+			},
+			successOnDone: function(data) {
+				// ends
+				alert("done");
+				$('#createNew').html(createButtonLabel);
 				editorRight.load(updateContractDialog);
-				return;
+			},
+			fail: function(jsonErrorReport) {
+				// functional error returned from the server
+				uglyfyWhenError(jsonErrorReport);
+			},
+			error: function(error) {
+				// technical connection error
+				alert("connection not available: "+getUrl()); 
 			}
-			if ( !confirm("Continue connecting to Otemba?") ) {
-				// break
-				return;
-			}
-			triggerButtonFunction(json, processCreateNew);
-		}
+		});
 		
 		// sends json to Otemba
 		$('#createNew').on('click', function() {
-			triggerButtonFunction(deployContractDialog, processCreateNew);
+			eventEmitter.send(deployContractDialog);
+
 		});
+		
+		// cleanup the page 
+		$('#refreshPage').on('click', function() {
+			refreshAndSaveContractElementForUpdate(getJsonFromRight());
+			editorLeft.load({});
+			$("#errors").empty();
+		});
+		
+		// sets the label of the buttons createNew and update
+		$('#createNew').html(createButtonLabel);
+		$('#send').html(updateButtonLabel);
 		
 	});	
 
@@ -204,8 +200,9 @@
 
 	<div class="section center container">
 		<div class="left" id="selectMode1">
-			<button id="send">Inspect Contract (READ and/or UPDATE)</button>
-			<button id="createNew">Create new Contract (CREATE)</button>
+			<button id="send">Update Contract</button>
+			<button id="createNew">Create new Contract</button>
+			<button id="refreshPage">Refresh page</button>
 		</div>
 		<div class="right" id="selectMode2">
 			<button id="b1">Set Text</button>
