@@ -1,4 +1,9 @@
 # otembaTryOutUpdater
+
+# Important notice August 2019
+*From August 2019 Otemba will freeze its server.* 
+That means that it will not be available for testing nor operation. The reason is that Otemba was close to unknown and did not draw any traffic. We did not do any marketing and obviously it was not enough to offer this page on GitHub as an entry point. You may contact otembajelle if you need any information.
+
 # Simple html page app to issue REST requests to Otemba.io
 If you want to try Otemba.io or need an example of using the REST interface, this is a good place to start.
 
